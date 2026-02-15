@@ -1,113 +1,80 @@
-import { useState } from 'react'
-import axios from 'axios'
-import { useNavigate } from 'react-router-dom'
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import api from '../services/api'; // Sempre importe o api
 
-function Login() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const navigate = useNavigate()
+export default function Login() {
+    const [formData, setFormData] = useState({
+        email: '',
+        password: ''
+    });
 
-  const handleLogin = async (e) => {
-    e.preventDefault()
-    setLoading(true)
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
+    const navigate = useNavigate();
 
-    try {
-      // 1. Faz a chamada ao Java
-      const response = await axios.post('http://localhost:8080/auth/login', {
-        email: email,
-        password: password
-      })
-
-      // 2. Extrai o token
-      const token = response.data.token 
-      
-      // 3. Salva no navegador (Token + Email para o contexto do Tenant)
-      localStorage.setItem('token', token)
-      localStorage.setItem('userEmail', email) 
-
-      // 4. Redireciona para o Dashboard
-      navigate('/dashboard') 
-
-    } catch (error) {
-      console.error(error)
-      alert('Erro no login! Verifique se o e-mail e a senha estão corretos.')
-    } finally {
-      setLoading(false)
+    function handleChange(e) {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
     }
-  }
 
-  return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <h2 style={{ textAlign: 'center', color: '#333', marginBottom: '10px' }}>🔐 Acesso ao SaaS</h2>
-        <p style={{ textAlign: 'center', color: '#666', marginBottom: '30px' }}>
-          Entre para gerenciar sua academia.
-        </p>
+    async function handleSubmit(e) {
+        e.preventDefault();
+        setError('');
+        setLoading(true);
 
-        <form onSubmit={handleLogin} style={styles.form}>
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>E-mail</label>
-            <input 
-              type="email" 
-              placeholder="ex: dono@iron.com" 
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              style={styles.input}
-            />
-          </div>
+        try {
+            // AQUI TAMBÉM: Usando api.post
+            const response = await api.post('/auth/login', formData);
+            
+            console.log('Login sucesso:', response.data);
 
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>Senha</label>
-            <input 
-              type="password" 
-              placeholder="Sua senha secreta" 
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              style={styles.input}
-            />
-          </div>
+            // Salva o token (se seu backend retornar um token JWT)
+            if (response.data.token) {
+                localStorage.setItem('token', response.data.token);
+            }
 
-          <button type="submit" style={styles.button} disabled={loading}>
-            {loading ? 'Entrando...' : 'Entrar no Sistema'}
-          </button>
-        </form>
+            navigate('/dashboard'); // Redireciona para a área logada
+        } catch (err) {
+            console.error('Erro no login:', err);
+            const msg = err.response?.data?.message || 'Email ou senha inválidos.';
+            setError(msg);
+        } finally {
+            setLoading(false);
+        }
+    }
 
-        <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '14px', color: '#666' }}>
-          Ainda não é cliente?{' '}
-          <span onClick={() => navigate('/register')} style={styles.link}>
-            Crie sua conta grátis
-          </span>
-        </p>
-      </div>
-    </div>
-  )
+    return (
+        <div className="login-container">
+            <h2>Acesse sua Conta</h2>
+            {error && <p style={{ color: 'red' }}>{error}</p>}
+            
+            <form onSubmit={handleSubmit}>
+                <div>
+                    <label>Email:</label>
+                    <input
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        required
+                    />
+                </div>
+                <div>
+                    <label>Senha:</label>
+                    <input
+                        type="password"
+                        name="password"
+                        value={formData.password}
+                        onChange={handleChange}
+                        required
+                    />
+                </div>
+
+                <button type="submit" disabled={loading}>
+                    {loading ? 'Entrando...' : 'Entrar'}
+                </button>
+            </form>
+
+            <p>Não tem conta? <a href="/register">Cadastre-se</a></p>
+        </div>
+    );
 }
-
-// Estilos CSS-in-JS para manter a consistência com a tela de Registro
-const styles = {
-  container: {
-    display: 'flex', justifyContent: 'center', alignItems: 'center',
-    height: '100vh', backgroundColor: '#f0f2f5', fontFamily: 'Arial, sans-serif'
-  },
-  card: {
-    backgroundColor: 'white', padding: '40px', borderRadius: '10px',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.1)', width: '100%', maxWidth: '400px'
-  },
-  form: { display: 'flex', flexDirection: 'column', gap: '20px' },
-  inputGroup: { display: 'flex', flexDirection: 'column', gap: '8px' },
-  label: { fontSize: '14px', fontWeight: 'bold', color: '#555' },
-  input: {
-    padding: '12px', borderRadius: '5px', border: '1px solid #ddd', fontSize: '16px', outline: 'none'
-  },
-  button: {
-    padding: '12px', backgroundColor: '#007bff', color: 'white', border: 'none',
-    borderRadius: '5px', fontSize: '16px', cursor: 'pointer', fontWeight: 'bold',
-    transition: 'background 0.3s', marginTop: '10px'
-  },
-  link: { color: '#007bff', cursor: 'pointer', fontWeight: 'bold', textDecoration: 'none' }
-}
-
-export default Login
