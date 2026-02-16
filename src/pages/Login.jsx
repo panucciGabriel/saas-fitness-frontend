@@ -42,27 +42,35 @@ export default function Login() {
         }
     }
 
-    return (
-        <div className="login-container">
+    // Dentro de src/pages/Login.jsx
+
+return (
+    <div className="login-container">
+        {/* Adicionamos esta div para ser o "Cartão Branco" */}
+        <div className="login-card"> 
             <h2>Acesse sua Conta</h2>
-            {error && <p style={{ color: 'red' }}>{error}</p>}
+            <p>Bem-vindo de volta!</p>
+
+            {error && <div className="error-message">{error}</div>}
             
             <form onSubmit={handleSubmit}>
-                <div>
-                    <label>Email:</label>
+                <div className="form-group">
+                    <label>Email</label>
                     <input
                         type="email"
                         name="email"
+                        placeholder="seu@email.com"
                         value={formData.email}
                         onChange={handleChange}
                         required
                     />
                 </div>
-                <div>
-                    <label>Senha:</label>
+                <div className="form-group">
+                    <label>Senha</label>
                     <input
                         type="password"
                         name="password"
+                        placeholder="******"
                         value={formData.password}
                         onChange={handleChange}
                         required
@@ -74,7 +82,10 @@ export default function Login() {
                 </button>
             </form>
 
-            <p>Não tem conta? <a href="/register">Cadastre-se</a></p>
+            <div className="register-footer">
+                Não tem conta? <a href="/register">Cadastre-se</a>
+            </div>
         </div>
-    );
+    </div>
+);
 }
