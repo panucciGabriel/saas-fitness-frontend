@@ -1,20 +1,37 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Register from './pages/Register';
-// ... outros imports
+import Dashboard from './pages/Dashboard'; // <--- 1. Importe o Dashboard
+
+// (Opcional) Componente para proteger a rota
+function PrivateRoute({ children }) {
+  const token = localStorage.getItem('token');
+  return token ? children : <Navigate to="/login" />;
+}
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Rota raiz redireciona para Login ou Dashboard */}
+        {/* Rota padrão joga para Login */}
         <Route path="/" element={<Navigate to="/login" />} />
         
-        {/* As rotas precisam estar definidas assim: */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        
-        {/* ... outras rotas ... */}
+
+        {/* --- 2. ADICIONE ESSA LINHA AQUI --- */}
+        <Route 
+          path="/dashboard" 
+          element={
+            <PrivateRoute>
+              <Dashboard />
+            </PrivateRoute>
+          } 
+        />
+        {/* ----------------------------------- */}
+
+        {/* Rota para qualquer endereço desconhecido (404) */}
+        <Route path="*" element={<h1>Página não encontrada</h1>} />
       </Routes>
     </BrowserRouter>
   );
