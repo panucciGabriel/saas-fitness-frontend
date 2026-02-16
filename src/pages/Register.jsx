@@ -5,7 +5,7 @@ import api from '../services/api'; // Importando a configuração correta da API
 // --- ATENÇÃO AQUI ---
 // Se o seu arquivo de estilo tiver outro nome, altere esta linha!
 // Exemplo: import './Register.css'; ou import '../App.css';
-import './index.css'; 
+import '../index.css';
 // --------------------
 
 export default function Register() {
