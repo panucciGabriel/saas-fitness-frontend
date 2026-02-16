@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom' // Usar useNavigate é melhor que window.location
-import api from '../services/api' // <--- IMPORTANTE: Usando nossa API configurada
+import { useNavigate } from 'react-router-dom'
+import api from '../services/api' // Usando nossa API configurada
 
 function Dashboard() {
   const [students, setStudents] = useState([])
@@ -16,9 +16,8 @@ function Dashboard() {
   // --- LEITURA (GET) ---
   const fetchStudents = async () => {
     try {
-      // O 'api' já injeta o token automaticamente pelo interceptor que criamos
-      // E já sabe que a URL base é a da Railway
-      const response = await api.get('/students')
+      // CORREÇÃO: Adicionado /api antes de /students
+      const response = await api.get('/api/students')
       setStudents(response.data)
     } catch (error) {
       console.error("Erro ao buscar alunos:", error)
@@ -28,7 +27,8 @@ function Dashboard() {
   // --- ESTATÍSTICAS (GET) ---
   const fetchStats = async () => {
     try {
-      const response = await api.get('/students/stats')
+      // CORREÇÃO: Adicionado /api antes de /students/stats
+      const response = await api.get('/api/students/stats')
       setStats(response.data)
     } catch (error) {
       console.error("Erro ao buscar estatísticas:", error)
@@ -50,14 +50,16 @@ function Dashboard() {
     
     try {
       if (editingId) {
-        await api.put(`/students/${editingId}`, {
+        // CORREÇÃO: Adicionado /api
+        await api.put(`/api/students/${editingId}`, {
           name,
           email,
           plan: "Basic"
         })
         alert('Aluno atualizado com sucesso!')
       } else {
-        await api.post('/students', {
+        // CORREÇÃO: Adicionado /api
+        await api.post('/api/students', {
           name,
           email,
           plan: "Basic"
@@ -82,7 +84,8 @@ function Dashboard() {
     if (!window.confirm("Tem certeza que deseja excluir este aluno?")) return
 
     try {
-      await api.delete(`/students/${id}`)
+      // CORREÇÃO: Adicionado /api
+      await api.delete(`/api/students/${id}`)
       alert('Aluno removido!')
       fetchStudents()
       fetchStats()
@@ -105,7 +108,6 @@ function Dashboard() {
 
   if (loading) return <p style={{padding:'20px'}}>Carregando sistema...</p>
 
-  // Mantive seus estilos e estrutura visual idênticos abaixo
   return (
     <div style={styles.container}>
       <header style={styles.header}>
