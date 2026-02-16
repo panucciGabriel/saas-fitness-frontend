@@ -1,24 +1,24 @@
 import { useEffect, useState } from 'react'
-import axios from 'axios'
+import { useNavigate } from 'react-router-dom' // Usar useNavigate é melhor que window.location
+import api from '../services/api' // <--- IMPORTANTE: Usando nossa API configurada
 
 function Dashboard() {
   const [students, setStudents] = useState([])
   const [loading, setLoading] = useState(true)
-  // Estado novo para guardar os números (Total e Ativos)
   const [stats, setStats] = useState({ totalStudents: 0, activePlans: 0 })
 
-  // Estados do Formulário
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [editingId, setEditingId] = useState(null)
+  
+  const navigate = useNavigate()
 
   // --- LEITURA (GET) ---
   const fetchStudents = async () => {
     try {
-      const token = localStorage.getItem('token')
-      const response = await axios.get('http://localhost:8080/api/students', {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      // O 'api' já injeta o token automaticamente pelo interceptor que criamos
+      // E já sabe que a URL base é a da Railway
+      const response = await api.get('/students')
       setStudents(response.data)
     } catch (error) {
       console.error("Erro ao buscar alunos:", error)
@@ -28,18 +28,13 @@ function Dashboard() {
   // --- ESTATÍSTICAS (GET) ---
   const fetchStats = async () => {
     try {
-      const token = localStorage.getItem('token')
-      // Chama o endpoint novo que criamos no Java
-      const response = await axios.get('http://localhost:8080/api/students/stats', {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      const response = await api.get('/students/stats')
       setStats(response.data)
     } catch (error) {
-      console.error("Erro ao buscar estatísticas (verifique se criou o endpoint no Java):", error)
+      console.error("Erro ao buscar estatísticas:", error)
     }
   }
 
-  // Carrega tudo ao iniciar (Promise.all para carregar junto)
   useEffect(() => {
     const loadData = async () => {
       setLoading(true)
@@ -52,37 +47,27 @@ function Dashboard() {
   // --- ESCRITA (POST ou PUT) ---
   const handleSubmit = async (e) => {
     e.preventDefault()
-    const token = localStorage.getItem('token')
     
     try {
       if (editingId) {
-        // MODO EDIÇÃO (PUT)
-        await axios.put(`http://localhost:8080/api/students/${editingId}`, {
+        await api.put(`/students/${editingId}`, {
           name,
           email,
           plan: "Basic"
-        }, {
-          headers: { Authorization: `Bearer ${token}` }
         })
         alert('Aluno atualizado com sucesso!')
       } else {
-        // MODO CRIAÇÃO (POST)
-        await axios.post('http://localhost:8080/api/students', {
+        await api.post('/students', {
           name,
           email,
           plan: "Basic"
-        }, {
-          headers: { Authorization: `Bearer ${token}` }
         })
         alert('Aluno cadastrado com sucesso!')
       }
       
-      // Limpeza
       setName('')
       setEmail('')
       setEditingId(null)
-      
-      // Atualiza a lista E os números do topo
       fetchStudents() 
       fetchStats()
 
@@ -97,12 +82,8 @@ function Dashboard() {
     if (!window.confirm("Tem certeza que deseja excluir este aluno?")) return
 
     try {
-      const token = localStorage.getItem('token')
-      await axios.delete(`http://localhost:8080/api/students/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      await api.delete(`/students/${id}`)
       alert('Aluno removido!')
-      // Atualiza lista e números
       fetchStudents()
       fetchStats()
     } catch (error) {
@@ -119,15 +100,14 @@ function Dashboard() {
 
   const handleLogout = () => {
     localStorage.clear()
-    window.location.href = '/'
+    navigate('/')
   }
 
   if (loading) return <p style={{padding:'20px'}}>Carregando sistema...</p>
 
+  // Mantive seus estilos e estrutura visual idênticos abaixo
   return (
     <div style={styles.container}>
-      
-      {/* Cabeçalho */}
       <header style={styles.header}>
         <h1 style={{margin:0}}>🏋️‍♂️ Gestão de Alunos</h1>
         <div style={{display: 'flex', gap: '10px', alignItems: 'center'}}>
@@ -138,7 +118,6 @@ function Dashboard() {
         </div>
       </header>
 
-      {/* --- NOVO: Cards de Estatísticas --- */}
       <div style={{ display: 'flex', gap: '20px', marginBottom: '20px' }}>
         <div style={styles.statCard}>
           <h4 style={{margin: 0, color: '#666'}}>Total de Alunos</h4>
@@ -154,7 +133,6 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* Formulário Inteligente */}
       <div style={styles.card}>
         <h3>{editingId ? '✏️ Editando Aluno' : '➕ Novo Aluno'}</h3>
         <form onSubmit={handleSubmit} style={styles.form}>
@@ -193,7 +171,6 @@ function Dashboard() {
         </form>
       </div>
 
-      {/* Tabela de Dados */}
       <div style={styles.card}>
         <table style={styles.table}>
           <thead>
@@ -235,17 +212,11 @@ function Dashboard() {
   )
 }
 
-// Estilos
 const styles = {
   container: { padding: '30px', fontFamily: 'Arial', backgroundColor: '#f0f2f5', minHeight: '100vh' },
   header: { display: 'flex', justifyContent: 'space-between', marginBottom: '20px', alignItems: 'center' },
   card: { backgroundColor: 'white', padding: '25px', borderRadius: '10px', marginBottom: '20px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' },
-  // Estilo novo para os cards
-  statCard: { 
-    flex: 1, backgroundColor: 'white', padding: '20px', 
-    borderRadius: '10px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
-    borderLeft: '5px solid #007bff'
-  },
+  statCard: { flex: 1, backgroundColor: 'white', padding: '20px', borderRadius: '10px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)', borderLeft: '5px solid #007bff' },
   form: { display: 'flex', gap: '10px', flexWrap: 'wrap' },
   input: { padding: '10px', borderRadius: '5px', border: '1px solid #ccc', flex: 1, minWidth: '200px' },
   addBtn: { padding: '10px 20px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' },
