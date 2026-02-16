@@ -1,27 +1,23 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
-import Register from './pages/Register'
-import PrivateRoute from './components/PrivateRoute' // <--- Importe o segurança
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import Login from './pages/Login';
+import Register from './pages/Register';
+// ... outros imports
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Rotas Públicas (Qualquer um acessa) */}
-        <Route path="/" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-
-        {/* Rotas Privadas (Só com crachá) */}
-        <Route path="/dashboard" element={
-          <PrivateRoute>
-            <Dashboard />
-          </PrivateRoute>
-        } />
+        {/* Rota raiz redireciona para Login ou Dashboard */}
+        <Route path="/" element={<Navigate to="/login" />} />
         
+        {/* As rotas precisam estar definidas assim: */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        
+        {/* ... outras rotas ... */}
       </Routes>
     </BrowserRouter>
-  )
+  );
 }
 
-export default App
+export default App;
