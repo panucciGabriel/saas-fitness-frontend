@@ -12,13 +12,26 @@ const api = axios.create({
     },
 });
 
-// (Opcional) Interceptor para adicionar o Token automaticamente se você usar Login depois
+// Interceptor de REQUEST: Adiciona o Token automaticamente
 api.interceptors.request.use((config) => {
-    const token = localStorage.getItem('token'); // Ou onde você salva o token
+    const token = localStorage.getItem('token');
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
 });
+
+// Interceptor de RESPONSE: Trata erros 401 globalmente
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response?.status === 401) {
+            // Token inválido ou expirado
+            localStorage.clear();
+            window.location.href = '/login';
+        }
+        return Promise.reject(error);
+    }
+);
 
 export default api;

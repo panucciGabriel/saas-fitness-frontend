@@ -1,19 +1,15 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import api from '../services/api'; // Importando a configuração correta da API
-
-// --- ATENÇÃO AQUI ---
-// Se o seu arquivo de estilo tiver outro nome, altere esta linha!
-// Exemplo: import './Register.css'; ou import '../App.css';
+import toast, { Toaster } from 'react-hot-toast';
+import api from '../services/api';
 import '../index.css';
-// --------------------
 
 export default function Register() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
-    confirmPassword: '' // Adicionei confirmação de senha (opcional, mas bom ter)
+    confirmPassword: ''
   });
 
   const [error, setError] = useState('');
@@ -24,38 +20,64 @@ export default function Register() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   }
 
+  // Validação de email
+  function isValidEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
-    setLoading(true);
 
-    // Validação simples de senha
-    if (formData.password !== formData.confirmPassword) {
-      setError('As senhas não coincidem!');
+    // Validação de email
+    if (!isValidEmail(formData.email)) {
+      setError('Por favor, insira um email válido.');
+      toast.error('Email inválido!');
       setLoading(false);
       return;
     }
 
+    // Validação de senha mínima
+    if (formData.password.length < 6) {
+      setError('A senha deve ter no mínimo 6 caracteres.');
+      toast.error('Senha muito curta!');
+      setLoading(false);
+      return;
+    }
+
+    // Validação de confirmação de senha
+    if (formData.password !== formData.confirmPassword) {
+      setError('As senhas não coincidem!');
+      toast.error('As senhas não coincidem!');
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+
     try {
-      // Prepara os dados para enviar (removemos o confirmPassword pois o backend não precisa dele)
       const dataToSend = {
         name: formData.name,
         email: formData.email,
         password: formData.password,
-        role: 'STUDENT' // Se seu backend exigir role, mantenha. Se não, pode apagar.
+        role: 'STUDENT'
       };
 
-      // AQUI É O PULO DO GATO: Usando 'api' em vez de 'axios' direto
       await api.post('/auth/register', dataToSend);
-      
-      alert('Cadastro realizado com sucesso! Faça login.');
-      navigate('/login'); // Redireciona para o login
-      
+
+      toast.success('Cadastro realizado com sucesso!');
+
+      // Pequeno delay para mostrar o toast antes de redirecionar
+      setTimeout(() => {
+        navigate('/login');
+      }, 1000);
+
     } catch (err) {
       console.error('Erro no registro:', err);
-      // Tenta pegar a mensagem de erro bonita do backend
       const msg = err.response?.data?.message || 'Erro ao conectar com o servidor. Tente novamente.';
       setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -63,6 +85,7 @@ export default function Register() {
 
   return (
     <div className="register-container">
+      <Toaster position="top-right" />
       <div className="register-content">
         <h2>Crie sua Conta</h2>
         <p>Preencha os dados abaixo para começar.</p>
@@ -97,7 +120,7 @@ export default function Register() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">Senha</label>
+            <label htmlFor="password">Senha (mínimo 6 caracteres)</label>
             <input
               type="password"
               id="password"
@@ -106,6 +129,7 @@ export default function Register() {
               value={formData.password}
               onChange={handleChange}
               required
+              minLength={6}
             />
           </div>
 

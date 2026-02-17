@@ -1,13 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import Dashboard from './pages/Dashboard'; // <--- 1. Importe o Dashboard
-
-// (Opcional) Componente para proteger a rota
-function PrivateRoute({ children }) {
-  const token = localStorage.getItem('token');
-  return token ? children : <Navigate to="/login" />;
-}
+import Dashboard from './pages/Dashboard';
+import PrivateRoute from './components/PrivateRoute';
 
 function App() {
   return (
@@ -15,18 +10,18 @@ function App() {
       <Routes>
         {/* Rota padrão joga para Login */}
         <Route path="/" element={<Navigate to="/login" />} />
-        
+
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
         {/* --- 2. ADICIONE ESSA LINHA AQUI --- */}
-        <Route 
-          path="/dashboard" 
+        <Route
+          path="/dashboard"
           element={
             <PrivateRoute>
               <Dashboard />
             </PrivateRoute>
-          } 
+          }
         />
         {/* ----------------------------------- */}
 

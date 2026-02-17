@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import api from '../services/api' // <--- A MÁGICA: Importando nosso serviço configurado
+import toast, { Toaster } from 'react-hot-toast'
+import api from '../services/api'
 
 function Dashboard() {
   const [students, setStudents] = useState([])
@@ -10,20 +11,19 @@ function Dashboard() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [editingId, setEditingId] = useState(null)
-  
+
   const navigate = useNavigate()
 
   // --- LEITURA (GET) ---
   const fetchStudents = async () => {
     try {
-      // O 'api' já sabe a URL base e já envia o Token sozinho!
       const response = await api.get('/api/students')
       setStudents(response.data)
     } catch (error) {
       console.error("Erro ao buscar alunos:", error)
-      // Se der erro 401 (Não autorizado), joga pro login
-      if (error.response && error.response.status === 401) {
-        handleLogout()
+      // O interceptor global já trata o 401
+      if (error.response && error.response.status !== 401) {
+        toast.error('Erro ao carregar alunos')
       }
     }
   }
@@ -35,6 +35,9 @@ function Dashboard() {
       setStats(response.data)
     } catch (error) {
       console.error("Erro ao buscar estatísticas:", error)
+      if (error.response && error.response.status !== 401) {
+        toast.error('Erro ao carregar estatísticas')
+      }
     }
   }
 
@@ -50,7 +53,7 @@ function Dashboard() {
   // --- ESCRITA (POST ou PUT) ---
   const handleSubmit = async (e) => {
     e.preventDefault()
-    
+
     try {
       if (editingId) {
         // EDITAR
@@ -59,7 +62,7 @@ function Dashboard() {
           email,
           plan: "Basic"
         })
-        alert('Aluno atualizado com sucesso!')
+        toast.success('Aluno atualizado com sucesso!')
       } else {
         // CRIAR
         await api.post('/api/students', {
@@ -67,17 +70,18 @@ function Dashboard() {
           email,
           plan: "Basic"
         })
-        alert('Aluno cadastrado com sucesso!')
+        toast.success('Aluno cadastrado com sucesso!')
       }
-      
+
       setName('')
       setEmail('')
       setEditingId(null)
-      fetchStudents() 
+      fetchStudents()
       fetchStats()
 
     } catch (error) {
-      alert('Erro ao salvar aluno. Verifique se o email já existe.')
+      const msg = error.response?.data?.message || 'Erro ao salvar aluno. Verifique se o email já existe.'
+      toast.error(msg)
       console.error(error)
     }
   }
@@ -88,11 +92,11 @@ function Dashboard() {
 
     try {
       await api.delete(`/api/students/${id}`)
-      alert('Aluno removido!')
+      toast.success('Aluno removido com sucesso!')
       fetchStudents()
       fetchStats()
     } catch (error) {
-      alert('Erro ao excluir')
+      toast.error('Erro ao excluir aluno')
       console.error(error)
     }
   }
@@ -105,17 +109,28 @@ function Dashboard() {
 
   const handleLogout = () => {
     localStorage.clear()
-    navigate('/')
+    toast.success('Logout realizado!')
+    setTimeout(() => {
+      navigate('/')
+    }, 500)
   }
 
-  if (loading) return <p style={{padding:'20px', textAlign: 'center'}}>Carregando sistema...</p>
+  if (loading) {
+    return (
+      <div style={{ padding: '20px', textAlign: 'center' }}>
+        <div className="spinner"></div>
+        <p>Carregando sistema...</p>
+      </div>
+    )
+  }
 
   return (
     <div className="dashboard-container">
+      <Toaster position="top-right" />
       <header className="dashboard-header">
         <h1>🏋️‍♂️ Gestão de Alunos</h1>
         <div className="user-info">
-          <span>Logado como: <strong>{localStorage.getItem('userEmail')}</strong></span>
+          <span>Logado como: <strong>{localStorage.getItem('userEmail') || 'Usuário'}</strong></span>
           <button onClick={handleLogout} className="logout-btn">Sair</button>
         </div>
       </header>
@@ -134,29 +149,29 @@ function Dashboard() {
       <div className="card-container">
         <h3>{editingId ? '✏️ Editando Aluno' : '➕ Novo Aluno'}</h3>
         <form onSubmit={handleSubmit} className="student-form">
-          <input 
-            type="text" 
-            placeholder="Nome Completo" 
+          <input
+            type="text"
+            placeholder="Nome Completo"
             value={name}
             onChange={e => setName(e.target.value)}
             required
           />
-          <input 
-            type="email" 
-            placeholder="E-mail" 
+          <input
+            type="email"
+            placeholder="E-mail"
             value={email}
             onChange={e => setEmail(e.target.value)}
             required
           />
-          
+
           <div className="form-actions">
             <button type="submit" className={editingId ? 'btn-save' : 'btn-add'}>
               {editingId ? 'Salvar Alterações' : 'Adicionar Aluno'}
             </button>
-            
+
             {editingId && (
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => { setEditingId(null); setName(''); setEmail(''); }}
                 className="btn-cancel"
               >
