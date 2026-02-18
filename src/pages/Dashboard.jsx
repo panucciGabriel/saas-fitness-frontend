@@ -8,36 +8,31 @@ function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({ totalStudents: 0, activePlans: 0 })
 
+  // Estados para edição manual (opcional, mantido para compatibilidade)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [editingId, setEditingId] = useState(null)
 
   const navigate = useNavigate()
 
-  // --- LEITURA (GET) ---
   const fetchStudents = async () => {
     try {
       const response = await api.get('/api/students')
       setStudents(response.data)
     } catch (error) {
       console.error("Erro ao buscar alunos:", error)
-      // O interceptor global já trata o 401
-      if (error.response && error.response.status !== 401) {
-        toast.error('Erro ao carregar alunos')
+      if (error.response && error.response.status === 401) {
+        handleLogout()
       }
     }
   }
 
-  // --- ESTATÍSTICAS (GET) ---
   const fetchStats = async () => {
     try {
       const response = await api.get('/api/students/stats')
       setStats(response.data)
     } catch (error) {
       console.error("Erro ao buscar estatísticas:", error)
-      if (error.response && error.response.status !== 401) {
-        toast.error('Erro ao carregar estatísticas')
-      }
     }
   }
 
@@ -50,87 +45,83 @@ function Dashboard() {
     loadData()
   }, [])
 
-  // --- ESCRITA (POST ou PUT) ---
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-
+  // --- LÓGICA DO CONVITE SELF-SERVICE ---
+  const handleInvite = async () => {
     try {
-      if (editingId) {
-        // EDITAR
-        await api.put(`/api/students/${editingId}`, {
-          name,
-          email,
-          plan: "Basic"
-        })
-        toast.success('Aluno atualizado com sucesso!')
-      } else {
-        // CRIAR
-        await api.post('/api/students', {
-          name,
-          email,
-          plan: "Basic"
-        })
-        toast.success('Aluno cadastrado com sucesso!')
-      }
+      const response = await api.post('/api/invites')
+      const link = response.data.link;
 
-      setName('')
-      setEmail('')
-      setEditingId(null)
-      fetchStudents()
-      fetchStats()
+      // Copia para o clipboard
+      await navigator.clipboard.writeText(link);
+      toast.success('✅ Link de matrícula copiado! Envie para seu aluno.');
 
     } catch (error) {
-      const msg = error.response?.data?.message || 'Erro ao salvar aluno. Verifique se o email já existe.'
+      toast.error('Erro ao gerar convite. Tente novamente.');
+      console.error(error);
+    }
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    try {
+      if (editingId) {
+        // Edição: apenas atualiza nome, email e plano (sem senha)
+        await api.put(`/api/students/${editingId}`, { name, email, plan: "Basic" })
+        toast.success('Aluno atualizado com sucesso!')
+      } else {
+        // Criação direta pelo Personal (sem convite) — senha temporária gerada
+        // O fluxo recomendado é via link de convite (botão "Link de Matrícula")
+        const tempPassword = Math.random().toString(36).slice(-8);
+        await api.post('/api/students', { name, email, plan: "Basic", password: tempPassword })
+        toast.success(`Aluno cadastrado! Senha temporária: ${tempPassword} (informe ao aluno)`)
+      }
+      setName(''); setEmail(''); setEditingId(null)
+      fetchStudents(); fetchStats()
+    } catch (error) {
+      const msg = error.response?.data?.error || 'Erro ao salvar aluno.'
       toast.error(msg)
       console.error(error)
     }
   }
 
-  // --- EXCLUSÃO (DELETE) ---
   const handleDelete = async (id) => {
     if (!window.confirm("Tem certeza que deseja excluir este aluno?")) return
-
     try {
       await api.delete(`/api/students/${id}`)
       toast.success('Aluno removido com sucesso!')
-      fetchStudents()
-      fetchStats()
+      fetchStudents(); fetchStats()
     } catch (error) {
-      toast.error('Erro ao excluir aluno')
+      toast.error('Erro ao excluir aluno.')
       console.error(error)
     }
   }
 
   const startEditing = (student) => {
-    setName(student.name)
-    setEmail(student.email)
-    setEditingId(student.id)
+    setName(student.name); setEmail(student.email); setEditingId(student.id)
   }
 
   const handleLogout = () => {
     localStorage.clear()
     toast.success('Logout realizado!')
-    setTimeout(() => {
-      navigate('/')
-    }, 500)
+    setTimeout(() => navigate('/'), 500)
   }
 
-  if (loading) {
-    return (
-      <div style={{ padding: '20px', textAlign: 'center' }}>
-        <div className="spinner"></div>
-        <p>Carregando sistema...</p>
-      </div>
-    )
-  }
+  if (loading) return <p style={{ padding: '20px', textAlign: 'center' }}>Carregando sistema...</p>
 
   return (
     <div className="dashboard-container">
       <Toaster position="top-right" />
       <header className="dashboard-header">
-        <h1>🏋️‍♂️ Gestão de Alunos</h1>
+        <div>
+          <h1 style={{ margin: 0 }}>🏋️‍♂️ Gestão de Alunos</h1>
+          <p style={{ margin: 0, fontSize: '14px', color: '#666' }}>Painel do Personal</p>
+        </div>
+
         <div className="user-info">
-          <span>Logado como: <strong>{localStorage.getItem('userEmail') || 'Usuário'}</strong></span>
+          <button onClick={handleInvite} className="btn-invite" style={{ backgroundColor: '#28a745', color: 'white', marginRight: '10px' }}>
+            🔗 Link de Matrícula
+          </button>
+
           <button onClick={handleLogout} className="logout-btn">Sair</button>
         </div>
       </header>
@@ -144,42 +135,6 @@ function Dashboard() {
           <h4>Planos Ativos</h4>
           <p>{stats.activePlans || 0}</p>
         </div>
-      </div>
-
-      <div className="card-container">
-        <h3>{editingId ? '✏️ Editando Aluno' : '➕ Novo Aluno'}</h3>
-        <form onSubmit={handleSubmit} className="student-form">
-          <input
-            type="text"
-            placeholder="Nome Completo"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            required
-          />
-          <input
-            type="email"
-            placeholder="E-mail"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            required
-          />
-
-          <div className="form-actions">
-            <button type="submit" className={editingId ? 'btn-save' : 'btn-add'}>
-              {editingId ? 'Salvar Alterações' : 'Adicionar Aluno'}
-            </button>
-
-            {editingId && (
-              <button
-                type="button"
-                onClick={() => { setEditingId(null); setName(''); setEmail(''); }}
-                className="btn-cancel"
-              >
-                Cancelar
-              </button>
-            )}
-          </div>
-        </form>
       </div>
 
       <div className="card-container">
@@ -199,16 +154,12 @@ function Dashboard() {
                 <td>{student.email}</td>
                 <td><span className="badge">{student.plan}</span></td>
                 <td>
-                  <button onClick={() => startEditing(student)} className="action-btn" title="Editar">✏️</button>
-                  <button onClick={() => handleDelete(student.id)} className="action-btn" title="Excluir">🗑️</button>
+                  <button onClick={() => startEditing(student)} className="action-btn">✏️</button>
+                  <button onClick={() => handleDelete(student.id)} className="action-btn">🗑️</button>
                 </td>
               </tr>
             )) : (
-              <tr>
-                <td colSpan="4" className="empty-state">
-                  Nenhum aluno cadastrado ainda.
-                </td>
-              </tr>
+              <tr><td colSpan="4" className="empty-state">Nenhum aluno cadastrado. Gere um link de matrícula!</td></tr>
             )}
           </tbody>
         </table>
