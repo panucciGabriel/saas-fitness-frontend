@@ -67,7 +67,6 @@ export default function Register() {
           age: formData.age,
           password: formData.password
         });
-        alert('Cadastro realizado! Faça login para ver seus treinos.');
       } else {
         // --- FLUXO DE PERSONAL ---
         await api.post('/auth/register', {
@@ -75,7 +74,6 @@ export default function Register() {
           email: formData.email,
           password: formData.password
         });
-        alert('Academia criada com sucesso! Faça login.');
       }
 
       toast.success(token ? 'Matrícula realizada! Faça login.' : 'Academia criada com sucesso! Faça login.');
