@@ -26,7 +26,6 @@ export default function Login() {
       // Salva no navegador para usar nas próximas requisições
       localStorage.setItem('token', token);
       localStorage.setItem('role', role);
-      // Salva o email diretamente do formulário (não depende da resposta do backend)
       localStorage.setItem('userEmail', email);
 
       toast.success('Login realizado com sucesso!');
@@ -34,9 +33,9 @@ export default function Login() {
       // Redirecionamento inteligente por role
       setTimeout(() => {
         if (role === 'TENANT') {
-          navigate('/dashboard');
+          navigate('/dashboard'); // Painel do Personal
         } else if (role === 'STUDENT') {
-          navigate('/student-dashboard');
+          navigate('/student-dashboard'); // Painel do Aluno
         } else {
           navigate('/dashboard');
         }
@@ -55,8 +54,9 @@ export default function Login() {
     <div className="login-container">
       <div className="login-content">
         <div className="login-header">
-          <h1>💪 Fitness B2B</h1>
-          <p>Faça login para continuar</p>
+          <h1>💪 App Fitness</h1>
+          {/* MUDANÇA 1: Texto mais inclusivo para os dois públicos */}
+          <p>Acesse seu painel (Personal ou Aluno)</p>
         </div>
 
         {error && <div className="error-message">{error}</div>}
@@ -92,11 +92,12 @@ export default function Login() {
         </form>
 
         <div className="login-footer">
+          {/* MUDANÇA 2: Deixando claro que a criação de conta aqui é SÓ para o Personal */}
           <p>
-            É Personal e não tem conta? <Link to="/register">Crie agora</Link>
+            <strong>Personal Trainer:</strong> Não tem conta? <Link to="/register">Crie sua academia</Link>
           </p>
-          <p style={{ fontSize: '12px', marginTop: '10px', color: '#666' }}>
-            * Alunos devem usar o link de convite enviado pelo seu Personal.
+          <p style={{ fontSize: '12px', marginTop: '10px', color: '#666', borderTop: '1px solid #eee', paddingTop: '10px' }}>
+            * <strong>Alunos:</strong> O primeiro acesso deve ser feito pelo link de matrícula enviado pelo seu treinador.
           </p>
         </div>
       </div>

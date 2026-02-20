@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import toast, { Toaster } from 'react-hot-toast';
 import api from '../services/api';
 import '../index.css';
 
@@ -15,7 +14,7 @@ export default function Register() {
   });
 
   const [searchParams] = useSearchParams();
-  const token = searchParams.get('token');
+  const token = searchParams.get('token'); 
 
   const [personalName, setPersonalName] = useState('');
   const [error, setError] = useState('');
@@ -25,15 +24,9 @@ export default function Register() {
   // Verifica o convite ao carregar a página
   useEffect(() => {
     if (token) {
-      // Endpoint correto: /api/invites/validate/:token
-      api.get(`/api/invites/validate/${token}`)
+      api.get(`/api/invites/${token}`)
         .then(res => {
-          // Backend retorna { valid: true, personalName: "..." }
-          if (res.data.valid) {
-            setPersonalName(res.data.personalName || 'seu Personal');
-          } else {
-            setError('Este link de convite é inválido ou expirou.');
-          }
+          setPersonalName(res.data.personalName);
         })
         .catch(() => {
           setError('Este link de convite é inválido ou expirou.');
@@ -67,6 +60,7 @@ export default function Register() {
           age: formData.age,
           password: formData.password
         });
+        alert('Cadastro realizado! Faça login para ver seus treinos.');
       } else {
         // --- FLUXO DE PERSONAL ---
         await api.post('/auth/register', {
@@ -74,16 +68,35 @@ export default function Register() {
           email: formData.email,
           password: formData.password
         });
+        alert('Academia criada com sucesso! Faça login.');
       }
 
-      toast.success(token ? 'Matrícula realizada! Faça login.' : 'Academia criada com sucesso! Faça login.');
-      setTimeout(() => navigate('/login'), 1000);
-
+      navigate('/login');
+      
     } catch (err) {
       console.error('Erro no registro:', err);
-      const msg = err.response?.data?.error || err.response?.data?.message || err.response?.data || 'Erro ao realizar cadastro.';
+      
+      // --- CORREÇÃO DA TELA BRANCA ---
+      let msg = 'Erro ao realizar cadastro. Verifique os dados ou tente outro e-mail.';
+      
+      if (err.response && err.response.data) {
+        // Se o backend mandou um texto simples
+        if (typeof err.response.data === 'string') {
+          msg = err.response.data;
+        } 
+        // Se o backend mandou um JSON com a chave "error"
+        else if (err.response.data.error) {
+          msg = err.response.data.error;
+        } 
+        // Se o backend mandou um JSON com a chave "message"
+        else if (err.response.data.message) {
+          msg = err.response.data.message;
+        }
+      }
+      
+      // Agora temos certeza que msg é uma String, e o React não vai quebrar!
       setError(msg);
-      toast.error(msg);
+      
     } finally {
       setLoading(false);
     }
@@ -91,20 +104,19 @@ export default function Register() {
 
   return (
     <div className="register-container">
-      <Toaster position="top-right" />
       <div className="register-content">
         <h2>{token ? 'Matrícula de Aluno' : 'Criar Conta de Personal'}</h2>
-
+        
         {token && personalName && (
-          <p className="invite-info">Você está se matriculando com: <strong>{personalName}</strong></p>
+           <p className="invite-info">Você está se matriculando com: <strong>{personalName}</strong></p>
         )}
-
+        
         {!token && <p>Comece a gerenciar seus alunos hoje.</p>}
 
         {error && <div className="error-message" style={{ color: 'red', marginBottom: '10px' }}>{error}</div>}
 
         <form onSubmit={handleSubmit} className="register-form">
-
+          
           <div className="form-group">
             <label>Nome Completo</label>
             <input type="text" name="name" placeholder="Seu nome" value={formData.name} onChange={handleChange} required />

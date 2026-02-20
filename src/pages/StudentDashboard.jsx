@@ -1,71 +1,85 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import toast, { Toaster } from 'react-hot-toast';
 import api from '../services/api';
+import '../index.css';
 
 export default function StudentDashboard() {
   const [workouts, setWorkouts] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  const userEmail = localStorage.getItem('userEmail') || 'Aluno';
-
   useEffect(() => {
-    api.get('/api/workouts')
-      .then(res => setWorkouts(res.data))
-      .catch(err => {
-        if (err.response?.status !== 401) {
-          toast.error('Erro ao carregar treinos.');
-        }
-      })
-      .finally(() => setLoading(false));
+    fetchMyWorkouts();
   }, []);
+
+  const fetchMyWorkouts = async () => {
+    try {
+      const response = await api.get('/api/workouts/my');
+      setWorkouts(response.data);
+    } catch (error) {
+      if (error.response && error.response.status === 401) handleLogout();
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.clear();
-    toast.success('Logout realizado!');
-    setTimeout(() => navigate('/'), 500);
+    navigate('/');
   };
 
-  const weekDays = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'];
+  if (loading) return <p style={{ padding: '20px', textAlign: 'center' }}>A carregar os seus treinos...</p>;
 
   return (
-    <div className="dashboard-container">
-      <Toaster position="top-right" />
-      <header className="dashboard-header">
-        <div>
-          <h1>🏋️‍♂️ Meus Treinos</h1>
-          <p style={{ margin: 0, fontSize: '14px', color: '#666' }}>Olá, {userEmail}</p>
-        </div>
-        <button onClick={handleLogout} className="logout-btn">Sair</button>
-      </header>
+    <div className="mobile-layout">
+      {/* CONTEÚDO */}
+      <div style={{ padding: '30px 20px' }}>
+        <header style={{ marginBottom: '25px' }}>
+          <h1 style={{ margin: 0, fontSize: '26px' }}>Meus Treinos</h1>
+          <p style={{ margin: 0, color: 'var(--text-muted)' }}>A sua ficha atualizada</p>
+        </header>
 
-      <div className="card-container">
-        {loading ? (
-          <p style={{ textAlign: 'center', padding: '20px' }}>Carregando treinos...</p>
-        ) : workouts.length === 0 ? (
-          <div className="stat-card" style={{ maxWidth: '100%' }}>
-            <h3>Nenhum treino cadastrado ainda</h3>
-            <p>Aguarde seu personal montar sua planilha de treinos. 💪</p>
-          </div>
-        ) : (
-          weekDays.map(day => {
-            const dayWorkouts = workouts.filter(w => w.weekDay === day);
-            if (dayWorkouts.length === 0) return null;
-            return (
-              <div key={day} className="stat-card" style={{ maxWidth: '100%', marginBottom: '16px' }}>
-                <h3 style={{ marginBottom: '12px' }}>📅 {day}</h3>
-                {dayWorkouts.map(workout => (
-                  <div key={workout.id} style={{ padding: '10px', background: '#f8f9fa', borderRadius: '8px', marginBottom: '8px' }}>
-                    <strong>{workout.name}</strong>
-                    {workout.description && <p style={{ margin: '4px 0 0', color: '#666', fontSize: '14px' }}>{workout.description}</p>}
-                  </div>
-                ))}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {workouts.length > 0 ? (
+            workouts.map(workout => (
+              <div key={workout.id} className="stat-card" style={{ padding: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                  <h3 style={{ margin: 0, color: 'var(--primary)', fontSize: '18px' }}>{workout.name}</h3>
+                  <span className="badge">{workout.weekDay}</span>
+                </div>
+                <p style={{ color: 'var(--text-main)', whiteSpace: 'pre-line', fontSize: '14px', backgroundColor: '#F9FAFB', padding: '15px', borderRadius: '8px' }}>
+                  {workout.description}
+                </p>
+                <button className="btn-submit" onClick={() => alert('Na Parte 2 este botão irá salvar no banco!')}>
+                  ✅ Concluir Treino
+                </button>
               </div>
-            );
-          })
-        )}
+            ))
+          ) : (
+            <div className="stat-card" style={{ textAlign: 'center', padding: '40px 20px' }}>
+              <span style={{ fontSize: '40px' }}>😴</span>
+              <h3 style={{ marginTop: '15px' }}>Sem treinos</h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>O seu treinador ainda não enviou a sua ficha.</p>
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* NOVO: NAVEGAÇÃO INFERIOR (BOTTOM NAV) */}
+      <nav className="bottom-nav">
+        <button className="nav-button active">
+          <span className="nav-icon">🏋️</span>
+          <span>Treinos</span>
+        </button>
+        <button className="nav-button" onClick={() => alert('Em breve: Página de Perfil')}>
+          <span className="nav-icon">👤</span>
+          <span>Perfil</span>
+        </button>
+        <button className="nav-button" onClick={handleLogout}>
+          <span className="nav-icon" style={{ color: '#EF4444' }}>🚪</span>
+          <span style={{ color: '#EF4444' }}>Sair</span>
+        </button>
+      </nav>
     </div>
   );
 }
