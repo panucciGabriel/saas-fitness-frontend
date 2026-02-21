@@ -7,7 +7,7 @@ export default function Register() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    phone: '',
+    phone: '', // 🌟 Agora o Personal também vai usar este campo
     age: '',
     password: '',
     confirmPassword: ''
@@ -66,6 +66,7 @@ export default function Register() {
         await api.post('/auth/register', {
           name: formData.name,
           email: formData.email,
+          phone: formData.phone, // 🌟 NOVO: Enviando o WhatsApp do Personal para o Java
           password: formData.password
         });
         alert('Academia criada com sucesso! Faça login.');
@@ -76,25 +77,20 @@ export default function Register() {
     } catch (err) {
       console.error('Erro no registro:', err);
       
-      // --- CORREÇÃO DA TELA BRANCA ---
       let msg = 'Erro ao realizar cadastro. Verifique os dados ou tente outro e-mail.';
       
       if (err.response && err.response.data) {
-        // Se o backend mandou um texto simples
         if (typeof err.response.data === 'string') {
           msg = err.response.data;
         } 
-        // Se o backend mandou um JSON com a chave "error"
         else if (err.response.data.error) {
-          msg = err.response.data.error;
+          msg = err.response.data.error; // 🌟 Apanha a mensagem do Java (ex: "WhatsApp já em uso")
         } 
-        // Se o backend mandou um JSON com a chave "message"
         else if (err.response.data.message) {
           msg = err.response.data.message;
         }
       }
       
-      // Agora temos certeza que msg é uma String, e o React não vai quebrar!
       setError(msg);
       
     } finally {
@@ -127,19 +123,18 @@ export default function Register() {
             <input type="email" name="email" placeholder="seu@email.com" value={formData.email} onChange={handleChange} required />
           </div>
 
-          {/* CAMPOS EXTRAS APENAS PARA ALUNOS */}
-          {token && (
-            <>
-              <div className="form-group">
-                <label>Celular / WhatsApp</label>
-                <input type="text" name="phone" placeholder="(11) 99999-9999" value={formData.phone} onChange={handleChange} required />
-              </div>
+          {/* 🌟 CAMPO DE WHATSAPP (Agora aparece para os dois!) */}
+          <div className="form-group">
+            <label>Celular / WhatsApp</label>
+            <input type="text" name="phone" placeholder="(11) 99999-9999" value={formData.phone} onChange={handleChange} required />
+          </div>
 
-              <div className="form-group">
-                <label>Idade</label>
-                <input type="number" name="age" placeholder="Ex: 25" value={formData.age} onChange={handleChange} required />
-              </div>
-            </>
+          {/* 🌟 CAMPO DE IDADE (Continua a aparecer APENAS para Alunos) */}
+          {token && (
+            <div className="form-group">
+              <label>Idade</label>
+              <input type="number" name="age" placeholder="Ex: 25" value={formData.age} onChange={handleChange} required />
+            </div>
           )}
 
           <div className="form-group">
