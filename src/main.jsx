@@ -1,13 +1,22 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom' // <--- IMPORTANTE
-import './index.css'
+import React from 'react'
+import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
+import './index.css'
+import { GoogleOAuthProvider } from '@react-oauth/google' 
 
-createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <BrowserRouter> {/* <--- ENVOLVA O APP AQUI */}
-      <App />
-    </BrowserRouter>
-  </StrictMode>,
+// 🌟 O SALVADOR: Trazendo o BrowserRouter de volta!
+import { BrowserRouter } from 'react-router-dom'
+
+// Lembre-se de colar a sua chave real do Google aqui!
+const GOOGLE_CLIENT_ID = "629004845915-6ge8nhfsdh3r8a5dd59pnvogc6875bot.apps.googleusercontent.com";
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      {/* 🌟 O BrowserRouter volta a envolver o App */}
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </GoogleOAuthProvider>
+  </React.StrictMode>,
 )

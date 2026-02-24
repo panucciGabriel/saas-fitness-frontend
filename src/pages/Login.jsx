@@ -1,104 +1,108 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import toast, { Toaster } from 'react-hot-toast';
 import api from '../services/api';
 import '../index.css';
+import { GoogleLogin } from '@react-oauth/google'; 
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
   const navigate = useNavigate();
 
+  // --- LOGIN TRADICIONAL (E-mail e Senha) ---
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
     setLoading(true);
-
     try {
       const response = await api.post('/auth/login', { email, password });
-
-      // O Backend retorna: { token: "...", role: "TENANT" ou "STUDENT" }
-      const { token, role } = response.data;
-
-      // Salva no navegador para usar nas próximas requisições
-      localStorage.setItem('token', token);
-      localStorage.setItem('role', role);
-      localStorage.setItem('userEmail', email);
-
-      toast.success('Login realizado com sucesso!');
-
-      // Redirecionamento inteligente por role
-      setTimeout(() => {
-        if (role === 'TENANT') {
-          navigate('/dashboard'); // Painel do Personal
-        } else if (role === 'STUDENT') {
-          navigate('/student-dashboard'); // Painel do Aluno
-        } else {
-          navigate('/dashboard');
-        }
-      }, 500);
-
+      
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('role', response.data.role);
+      
+      if (response.data.role === 'TENANT') navigate('/dashboard');
+      else if (response.data.role === 'STUDENT') navigate('/student-dashboard');
+      else navigate('/');
     } catch (err) {
-      const msg = err.response?.data?.error || 'E-mail ou senha inválidos. Tente novamente.';
-      setError(msg);
-      toast.error(msg);
+      setError('Credenciais inválidas. Verifique seu e-mail e senha.');
     } finally {
       setLoading(false);
     }
   }
 
+  // --- LOGIN COM GOOGLE ---
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setLoading(true);
+    setError('');
+    
+    try {
+      // Envia o token gigante do Google para a nossa API em Java
+      const response = await api.post('/auth/google', { 
+        token: credentialResponse.credential 
+      });
+      
+      // O Java aprovou! Guardamos o token do SaaS e entramos
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('role', response.data.role);
+      
+      if (response.data.role === 'TENANT') navigate('/dashboard');
+      else if (response.data.role === 'STUDENT') navigate('/student-dashboard');
+      
+    } catch (err) {
+      if (err.response && err.response.status === 404) {
+        setError('Conta não encontrada. Por favor, cadastre-se primeiro.');
+      } else {
+        setError('Falha ao autenticar com o Google no servidor.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="login-container">
-      <div className="login-content">
-        <div className="login-header">
-          <h1>💪 App Fitness</h1>
-          {/* MUDANÇA 1: Texto mais inclusivo para os dois públicos */}
-          <p>Acesse seu painel (Personal ou Aluno)</p>
-        </div>
-
-        {error && <div className="error-message">{error}</div>}
-
-        <form onSubmit={handleSubmit} className="login-form">
+      <div className="login-box">
+        <h2>Entrar no Sistema</h2>
+        {error && <p className="error-message" style={{ color: 'red', textAlign: 'center' }}>{error}</p>}
+        
+        {/* Formulário Tradicional */}
+        <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="email">E-mail</label>
-            <input
-              type="email"
-              id="email"
-              placeholder="seu@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
+            <label>E-mail</label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
           </div>
-
           <div className="form-group">
-            <label htmlFor="password">Senha</label>
-            <input
-              type="password"
-              id="password"
-              placeholder="******"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
+            <label>Senha</label>
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required />
           </div>
-
           <button type="submit" disabled={loading} className="btn-submit">
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
+        {/* 🛑 O form termina AQUI! O botão do Google não pode ficar aqui dentro. */}
 
-        <div className="login-footer">
-          {/* MUDANÇA 2: Deixando claro que a criação de conta aqui é SÓ para o Personal */}
-          <p>
-            <strong>Personal Trainer:</strong> Não tem conta? <Link to="/register">Crie sua academia</Link>
-          </p>
-          <p style={{ fontSize: '12px', marginTop: '10px', color: '#666', borderTop: '1px solid #eee', paddingTop: '10px' }}>
-            * <strong>Alunos:</strong> O primeiro acesso deve ser feito pelo link de matrícula enviado pelo seu treinador.
-          </p>
+        {/* Divisor Visual */}
+        <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0' }}>
+          <hr style={{ flex: 1, borderTop: '1px solid #e5e7eb' }} />
+          <span style={{ padding: '0 10px', color: '#6b7280', fontSize: '14px' }}>ou</span>
+          <hr style={{ flex: 1, borderTop: '1px solid #e5e7eb' }} />
+        </div>
+
+        {/* Botão Oficial do Google */}
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={() => {
+              setError('Erro ao conectar com o Google. Tente novamente.');
+            }}
+            // Sem o useOneTap para evitar problemas de Cooldown
+          />
+        </div>
+
+        <div className="login-footer" style={{ marginTop: '20px', textAlign: 'center' }}>
+          <p>Não tem uma conta? <Link to="/register">Crie uma Academia</Link></p>
         </div>
       </div>
     </div>
