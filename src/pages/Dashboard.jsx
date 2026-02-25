@@ -9,11 +9,13 @@ function Dashboard() {
   const [stats, setStats] = useState({ totalStudents: 0, activePlans: 0 })
 
   const [isWorkoutModalOpen, setIsWorkoutModalOpen] = useState(false)
-  // 🌟 NOVO: Estado para controlar a janela de Upgrade
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false) 
   
   const [selectedStudent, setSelectedStudent] = useState(null)
   const [workoutForm, setWorkoutForm] = useState({ name: '', weekDay: '', description: '' })
+  
+  // 🌟 NOVO: Estado para guardar o nome do Personal
+  const [userName, setUserName] = useState('Personal')
 
   const navigate = useNavigate()
 
@@ -34,6 +36,26 @@ function Dashboard() {
   }
 
   useEffect(() => {
+    // 🌟 NOVO: Decodificar o JWT para pegar o nome
+    const token = localStorage.getItem('token')
+    if (token) {
+      try {
+        // O JWT tem 3 partes. A parte do meio (índice 1) é o Payload onde guardámos o nome
+        const payload = JSON.parse(atob(token.split('.')[1]))
+        
+        if (payload.name) {
+          // Capitaliza a primeira letra para ficar bonito
+          const capitalized = payload.name.charAt(0).toUpperCase() + payload.name.slice(1)
+          setUserName(capitalized)
+        } else if (payload.sub) {
+          // Se não tiver nome por algum motivo, usa a primeira parte do e-mail
+          setUserName(payload.sub.split('@')[0])
+        }
+      } catch (e) {
+        console.error("Erro ao ler token", e)
+      }
+    }
+
     const loadData = async () => {
       setLoading(true)
       await Promise.all([fetchStudents(), fetchStats()])
@@ -49,13 +71,19 @@ function Dashboard() {
       await navigator.clipboard.writeText(link);
       toast.success('✅ Link de matrícula copiado! Envie para seu aluno.');
     } catch (error) {
-      // 🌟 NOVO: Verifica se o erro foi o limite do plano (403 Forbidden)
       if (error.response && error.response.status === 403) {
-        setIsUpgradeModalOpen(true); // Abre a janela de vendas!
+        setIsUpgradeModalOpen(true); 
       } else {
         toast.error('Erro ao gerar convite.');
       }
     }
+  }
+
+  // A sua função de logout já estava excelente!
+  const handleLogout = () => {
+    localStorage.clear()
+    toast.success('Logout realizado com sucesso!')
+    setTimeout(() => navigate('/login'), 500) // 🌟 Redireciona para o /login
   }
 
   const handleDelete = async (id) => {
@@ -65,12 +93,6 @@ function Dashboard() {
       toast.success('Aluno removido com sucesso!')
       fetchStudents(); fetchStats()
     } catch (error) { toast.error('Erro ao excluir aluno.') }
-  }
-
-  const handleLogout = () => {
-    localStorage.clear()
-    toast.success('Logout realizado!')
-    setTimeout(() => navigate('/'), 500)
   }
 
   const openWorkoutModal = (student) => {
@@ -98,13 +120,13 @@ function Dashboard() {
     } catch (error) { toast.error('Erro ao salvar o treino.') }
   }
 
-  if (loading) return <p style={{ padding: '20px', textAlign: 'center' }}>A carregar sistema...</p>
+  if (loading) return <p style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>A carregar o seu painel...</p>
 
   return (
     <div className="app-layout">
       <Toaster position="top-right" />
       
-      {/* SIDEBAR PROFISSIONAL */}
+      {/* SIDEBAR */}
       <aside className="sidebar">
         <div className="sidebar-header">
           <h2>💪 Fitness Pro</h2>
@@ -119,13 +141,13 @@ function Dashboard() {
           <span>🔗</span> Novo Convite
         </div>
 
-        {/* 🌟 NOVO: Botão Meu Plano */}
         <div className="nav-item" onClick={() => setIsUpgradeModalOpen(true)} style={{ color: '#F59E0B' }}>
           <span>⭐</span> Meu Plano
         </div>
         
         <div style={{ flex: 1 }}></div>
 
+        {/* 🌟 Botão de Sair perfeitamente posicionado */}
         <div className="nav-item" onClick={handleLogout} style={{ color: '#F87171', borderTop: '1px solid #374151' }}>
           <span>🚪</span> Sair da Conta
         </div>
@@ -134,7 +156,10 @@ function Dashboard() {
       {/* CONTEÚDO PRINCIPAL */}
       <main className="main-content">
         <div style={{ marginBottom: '30px' }}>
-          <h1 style={{ fontSize: '28px', color: 'var(--text-main)', margin: '0 0 5px 0' }}>Visão Geral</h1>
+          {/* 🌟 Cabeçalho Personalizado */}
+          <h1 style={{ fontSize: '28px', color: 'var(--text-main)', margin: '0 0 5px 0' }}>
+            Olá, {userName}! 👋
+          </h1>
           <p style={{ color: 'var(--text-muted)', margin: 0 }}>Faça a gestão dos seus alunos e treinos.</p>
         </div>
 
@@ -177,7 +202,7 @@ function Dashboard() {
           </table>
         </div>
 
-        {/* MODAL DE TREINO */}
+        {/* (Os modais continuam inalterados aqui para baixo) */}
         {isWorkoutModalOpen && (
           <div className="modal-overlay" style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000}}>
             <div className="modal-content" style={{backgroundColor: 'white', padding: '30px', borderRadius: '12px', width: '100%', maxWidth: '500px'}}>
@@ -209,7 +234,6 @@ function Dashboard() {
           </div>
         )}
 
-        {/* 🌟 NOVO: MODAL DE UPGRADE (PAYWALL) */}
         {isUpgradeModalOpen && (
           <div className="modal-overlay" style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000}}>
             <div className="modal-content" style={{backgroundColor: 'white', padding: '40px', borderRadius: '16px', width: '100%', maxWidth: '450px', textAlign: 'center', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'}}>
