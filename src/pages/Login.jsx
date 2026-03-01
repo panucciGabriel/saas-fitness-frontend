@@ -76,12 +76,18 @@ export default function Login() {
           <div className="form-group">
             <label>Senha</label>
             <input type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+            
+            {/* 🌟 NOVO: LINK DE RECUPERAÇÃO DE SENHA AQUI */}
+            <div style={{ textAlign: 'right', marginTop: '5px' }}>
+              <Link to="/forgot-password" style={{ fontSize: '13px', color: '#3b82f6', textDecoration: 'none' }}>
+                Esqueceu a senha?
+              </Link>
+            </div>
           </div>
           <button type="submit" disabled={loading} className="btn-submit">
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
-        {/* 🛑 O form termina AQUI! O botão do Google não pode ficar aqui dentro. */}
 
         {/* Divisor Visual */}
         <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0' }}>
@@ -97,7 +103,6 @@ export default function Login() {
             onError={() => {
               setError('Erro ao conectar com o Google. Tente novamente.');
             }}
-            // Sem o useOneTap para evitar problemas de Cooldown
           />
         </div>
 

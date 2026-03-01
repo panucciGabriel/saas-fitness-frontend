@@ -25,8 +25,11 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response?.status === 401) {
-            // Token inválido ou expirado
+        // 🌟 VERIFICA DE ONDE VEIO O ERRO
+        const isAuthRoute = error.config?.url?.includes('/auth');
+
+        // Só redireciona à força se NÃO for um erro de login
+        if (error.response?.status === 401 && !isAuthRoute) {
             localStorage.clear();
             window.location.href = '/login';
         }

@@ -1,19 +1,24 @@
-import { Routes, Route, Navigate } from 'react-router-dom'; // Remova 'BrowserRouter' daqui
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import StudentDashboard from './pages/StudentDashboard';
 import PrivateRoute from './components/PrivateRoute';
+// 🌟 NOVOS IMPORTS
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 function App() {
   return (
-    // Remova o <BrowserRouter> que envolvia tudo aqui
     <Routes>
-      {/* Rota padrão joga para Login */}
       <Route path="/" element={<Navigate to="/login" />} />
 
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      
+      {/* 🌟 NOVAS ROTAS DE RECUPERAÇÃO DE SENHA */}
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
       {/* Rota do Personal */}
       <Route
@@ -35,7 +40,6 @@ function App() {
         }
       />
 
-      {/* Rota 404 */}
       <Route path="*" element={<h1>Página não encontrada</h1>} />
     </Routes>
   );
