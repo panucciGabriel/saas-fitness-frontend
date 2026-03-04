@@ -14,7 +14,9 @@ function Dashboard() {
   const [selectedStudent, setSelectedStudent] = useState(null)
   const [workoutForm, setWorkoutForm] = useState({ name: '', weekDay: '', description: '' })
   
-  // 🌟 NOVO: Estado para guardar o nome do Personal
+  // 🌟 NOVO ESTADO: Guardar os treinos do aluno
+  const [studentWorkouts, setStudentWorkouts] = useState([])
+  
   const [userName, setUserName] = useState('Personal')
 
   const navigate = useNavigate()
@@ -36,19 +38,14 @@ function Dashboard() {
   }
 
   useEffect(() => {
-    // 🌟 NOVO: Decodificar o JWT para pegar o nome
     const token = localStorage.getItem('token')
     if (token) {
       try {
-        // O JWT tem 3 partes. A parte do meio (índice 1) é o Payload onde guardámos o nome
         const payload = JSON.parse(atob(token.split('.')[1]))
-        
         if (payload.name) {
-          // Capitaliza a primeira letra para ficar bonito
           const capitalized = payload.name.charAt(0).toUpperCase() + payload.name.slice(1)
           setUserName(capitalized)
         } else if (payload.sub) {
-          // Se não tiver nome por algum motivo, usa a primeira parte do e-mail
           setUserName(payload.sub.split('@')[0])
         }
       } catch (e) {
@@ -79,11 +76,10 @@ function Dashboard() {
     }
   }
 
-  // A sua função de logout já estava excelente!
   const handleLogout = () => {
     localStorage.clear()
     toast.success('Logout realizado com sucesso!')
-    setTimeout(() => navigate('/login'), 500) // 🌟 Redireciona para o /login
+    setTimeout(() => navigate('/login'), 500) 
   }
 
   const handleDelete = async (id) => {
@@ -95,28 +91,51 @@ function Dashboard() {
     } catch (error) { toast.error('Erro ao excluir aluno.') }
   }
 
-  const openWorkoutModal = (student) => {
+  // 🌟 ATUALIZADO: Busca os treinos ao abrir o modal
+  const openWorkoutModal = async (student) => {
     setSelectedStudent(student)
     setWorkoutForm({ name: '', weekDay: '', description: '' })
     setIsWorkoutModalOpen(true)
+    
+    try {
+      const response = await api.get(`/api/workouts/student/${student.id}`)
+      setStudentWorkouts(response.data)
+    } catch (error) {
+      toast.error('Erro ao carregar os treinos do aluno.')
+    }
   }
 
   const closeWorkoutModal = () => {
     setIsWorkoutModalOpen(false)
     setSelectedStudent(null)
+    setStudentWorkouts([])
   }
 
+  // 🌟 NOVO: Função para apagar treino
+  const handleDeleteWorkout = async (workoutId) => {
+    if (!window.confirm("Apagar este treino?")) return
+    try {
+      await api.delete(`/api/workouts/${workoutId}`)
+      toast.success('Treino removido!')
+      setStudentWorkouts(studentWorkouts.filter(w => w.id !== workoutId))
+    } catch (error) {
+      toast.error('Erro ao apagar treino.')
+    }
+  }
+
+  // 🌟 ATUALIZADO: Atualiza a lista na hora, sem fechar o modal
   const handleWorkoutSubmit = async (e) => {
     e.preventDefault()
     try {
-      await api.post('/api/workouts', {
+      const response = await api.post('/api/workouts', {
         name: workoutForm.name,
         weekDay: workoutForm.weekDay,
         description: workoutForm.description,
         studentId: selectedStudent.id
       })
-      toast.success(`Treino enviado para ${selectedStudent.name}!`)
-      closeWorkoutModal()
+      toast.success(`Treino adicionado!`)
+      setStudentWorkouts([...studentWorkouts, response.data])
+      setWorkoutForm({ name: '', weekDay: '', description: '' })
     } catch (error) { toast.error('Erro ao salvar o treino.') }
   }
 
@@ -126,7 +145,6 @@ function Dashboard() {
     <div className="app-layout">
       <Toaster position="top-right" />
       
-      {/* SIDEBAR */}
       <aside className="sidebar">
         <div className="sidebar-header">
           <h2>💪 Fitness Pro</h2>
@@ -147,16 +165,13 @@ function Dashboard() {
         
         <div style={{ flex: 1 }}></div>
 
-        {/* 🌟 Botão de Sair perfeitamente posicionado */}
         <div className="nav-item" onClick={handleLogout} style={{ color: '#F87171', borderTop: '1px solid #374151' }}>
           <span>🚪</span> Sair da Conta
         </div>
       </aside>
 
-      {/* CONTEÚDO PRINCIPAL */}
       <main className="main-content">
         <div style={{ marginBottom: '30px' }}>
-          {/* 🌟 Cabeçalho Personalizado */}
           <h1 style={{ fontSize: '28px', color: 'var(--text-main)', margin: '0 0 5px 0' }}>
             Olá, {userName}! 👋
           </h1>
@@ -202,34 +217,67 @@ function Dashboard() {
           </table>
         </div>
 
-        {/* (Os modais continuam inalterados aqui para baixo) */}
+        {/* 🌟 NOVO MODAL DIVIDIDO */}
         {isWorkoutModalOpen && (
           <div className="modal-overlay" style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000}}>
-            <div className="modal-content" style={{backgroundColor: 'white', padding: '30px', borderRadius: '12px', width: '100%', maxWidth: '500px'}}>
-              <h2 style={{marginTop: 0}}>Novo Treino para {selectedStudent?.name}</h2>
-              <form onSubmit={handleWorkoutSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '20px' }}>
-                <div className="form-group">
-                  <label>Nome do Treino</label>
-                  <input type="text" placeholder="Ex: Treino A" value={workoutForm.name} onChange={(e) => setWorkoutForm({...workoutForm, name: e.target.value})} required />
-                </div>
-                <div className="form-group">
-                  <label>Dia da Semana</label>
-                  <select value={workoutForm.weekDay} onChange={(e) => setWorkoutForm({...workoutForm, weekDay: e.target.value})} required>
-                    <option value="">Selecione...</option>
-                    <option value="Segunda-feira">Segunda-feira</option>
-                    <option value="Quarta-feira">Quarta-feira</option>
-                    <option value="Sexta-feira">Sexta-feira</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Exercícios</label>
-                  <textarea rows="4" placeholder="1. Supino Reto (4x12)" value={workoutForm.description} onChange={(e) => setWorkoutForm({...workoutForm, description: e.target.value})} required />
-                </div>
-                <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                  <button type="button" onClick={closeWorkoutModal} style={{padding: '10px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer'}}>Cancelar</button>
-                  <button type="submit" className="btn-submit" style={{width: 'auto', marginTop: 0}}>Salvar</button>
-                </div>
-              </form>
+            <div className="modal-content" style={{backgroundColor: 'white', padding: '30px', borderRadius: '12px', width: '100%', maxWidth: '800px', display: 'flex', gap: '30px', maxHeight: '90vh', overflowY: 'auto'}}>
+              
+              {/* LADO ESQUERDO: Lista de Treinos */}
+              <div style={{ flex: 1, borderRight: '1px solid #e5e7eb', paddingRight: '20px' }}>
+                <h2 style={{marginTop: 0}}>Treinos de {selectedStudent?.name}</h2>
+                
+                {studentWorkouts.length === 0 ? (
+                  <p style={{ color: '#6b7280', fontStyle: 'italic', marginTop: '20px' }}>Nenhum treino cadastrado ainda.</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px' }}>
+                    {studentWorkouts.map(workout => (
+                      <div key={workout.id} style={{ border: '1px solid #e5e7eb', padding: '15px', borderRadius: '8px', backgroundColor: '#f9fafb' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <strong style={{ color: '#111827' }}>{workout.name}</strong>
+                          <span style={{ fontSize: '12px', backgroundColor: '#dbeafe', color: '#1e40af', padding: '2px 8px', borderRadius: '10px' }}>{workout.weekDay}</span>
+                        </div>
+                        <p style={{ fontSize: '14px', color: '#4b5563', whiteSpace: 'pre-wrap', margin: '0 0 10px 0' }}>{workout.description}</p>
+                        <div style={{ textAlign: 'right' }}>
+                          <button onClick={() => handleDeleteWorkout(workout.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}>🗑️ Apagar</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* LADO DIREITO: Criar Novo Treino */}
+              <div style={{ flex: 1 }}>
+                <h3 style={{marginTop: 0, color: '#374151'}}>+ Criar Novo Treino</h3>
+                <form onSubmit={handleWorkoutSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '15px' }}>
+                  <div className="form-group">
+                    <label>Nome do Treino</label>
+                    <input type="text" placeholder="Ex: Treino A - Peito" value={workoutForm.name} onChange={(e) => setWorkoutForm({...workoutForm, name: e.target.value})} required />
+                  </div>
+                  <div className="form-group">
+                    <label>Dia da Semana</label>
+                    <select value={workoutForm.weekDay} onChange={(e) => setWorkoutForm({...workoutForm, weekDay: e.target.value})} required>
+                      <option value="">Selecione...</option>
+                      <option value="Segunda-feira">Segunda-feira</option>
+                      <option value="Terça-feira">Terça-feira</option>
+                      <option value="Quarta-feira">Quarta-feira</option>
+                      <option value="Quinta-feira">Quinta-feira</option>
+                      <option value="Sexta-feira">Sexta-feira</option>
+                      <option value="Sábado">Sábado</option>
+                      <option value="Domingo">Domingo</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Exercícios (Texto Livre)</label>
+                    <textarea rows="6" placeholder="1. Supino Reto (4x12)&#10;2. Crucifixo (3x15)" value={workoutForm.description} onChange={(e) => setWorkoutForm({...workoutForm, description: e.target.value})} required />
+                  </div>
+                  <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' }}>
+                    <button type="button" onClick={closeWorkoutModal} style={{padding: '10px 20px', borderRadius: '8px', border: '1px solid #d1d5db', background: 'white', cursor: 'pointer'}}>Fechar</button>
+                    <button type="submit" className="btn-submit" style={{width: 'auto', marginTop: 0}}>Adicionar Treino</button>
+                  </div>
+                </form>
+              </div>
+
             </div>
           </div>
         )}
